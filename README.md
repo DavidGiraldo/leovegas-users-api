@@ -231,3 +231,38 @@ The project follows a modular architecture:
 #### Auth Repository
 `app/models/auth/repository.ts`
 - Handles database operations related to authentication tokens.
+
+## Testing
+
+The project includes comprehensive functional tests that verify the behavior of all API endpoints. These tests ensure that the API works correctly and maintains its expected functionality.
+
+### Running Tests
+
+Before running the tests, ensure that the MySQL database is running, as the functional tests require a database connection.
+
+You can use any of the following commands to run the tests:
+
+- `npm run test` will execute: `node ace test`
+- `npm run test:functional` will execute: `node ace test --functional`
+- `npm run test:watch` will execute: `node ace test --watch`
+
+### Test Coverage
+
+The functional tests cover all major endpoints and scenarios, including:
+
+- User creation
+- User authentication (login)
+- User retrieval
+- User updates
+- User deletion
+- Paginated user listing
+- Error handling
+- Authentication validation
+- Authorization rules
+- Input validation
+
+### Test Results
+
+All functional tests have been verified to pass successfully:
+
+![Passed Tests](./img/PassedTests.jpg)
