@@ -1,3 +1,4 @@
+import { inject } from '@adonisjs/core'
 import { HttpContext } from '@adonisjs/core/http'
 
 import { logger } from '#config/logger'
@@ -5,10 +6,14 @@ import UserService from '#services/users_service'
 import { CreateUserDTO } from '#models/users/dto'
 import HttpExceptionHandler from '#exceptions/handler'
 import { getEmailParamValidated } from '#utils/helpers'
+import { E_USER_NOT_FOUND } from '#app/exceptions/handler'
 import { canTryCreateUser, canTryUpdateUser } from '#validators/users_data_validator'
 
+@inject()
 export default class UsersController extends HttpExceptionHandler {
-  private readonly userService = new UserService()
+  constructor(protected userService: UserService) {
+    super()
+  }
 
   public async create({ request, response }: HttpContext) {
     try {
@@ -31,7 +36,10 @@ export default class UsersController extends HttpExceptionHandler {
       const user = await this.userService.show(email)
 
       if (!user) {
-        return response.status(404).json({ message: 'User not found' })
+        const error = new Error('User not found')
+        Object.assign(error, { code: E_USER_NOT_FOUND })
+
+        throw error
       }
 
       logger.info(`${UsersController.name} - User found successfully`)

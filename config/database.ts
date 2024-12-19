@@ -1,9 +1,8 @@
-import env from '#start/env'
-
-import { logger } from '#config/logger'
-
 import mysql from 'mysql2/promise'
 import { drizzle } from 'drizzle-orm/mysql2'
+
+import env from '#start/env'
+import { logger } from '#config/logger'
 
 // Singleton instance holder
 let dbClientInstance: ReturnType<typeof drizzle> | null = null
@@ -38,7 +37,7 @@ function getDBConfigProps() {
   }
 }
 
-export async function setMySQLConn() {
+export default async function setMySQLConn() {
   if (dbClientInstance) {
     // Return the existing instance
     return dbClientInstance

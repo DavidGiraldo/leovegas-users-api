@@ -1,14 +1,12 @@
-import { HttpContext } from '@adonisjs/core/http'
-
+import env from '#start/env'
 import { isValidEmail } from '#validators/users_data_validator'
 
-import env from '#start/env'
 const AUTH_TOKENS_TTL = env.get('AUTH_TOKENS_TTL') ?? '20m'
 
 // Helper function to validate email param
-export const getEmailParamValidated = async (params: HttpContext['params']) => {
-  const emailData = { email: params?.email }
-  const { email } = await isValidEmail.validate(emailData)
+export const getEmailParamValidated = async (requestData: Record<string, any>) => {
+  // get the data type of emailToValidate
+  const { email } = await isValidEmail.validate(requestData)
 
   return email
 }

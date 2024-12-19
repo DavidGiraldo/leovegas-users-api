@@ -5,8 +5,9 @@ import { HttpContext, ExceptionHandler } from '@adonisjs/core/http'
 import { logger } from '#config/logger'
 
 const ER_DUP_ENTRY = 'ER_DUP_ENTRY'
-const E_SAME_PASSWORD = 'E_SAME_PASSWORD'
-const E_INVALID_CREDENTIALS = 'E_INVALID_CREDENTIALS'
+export const E_SAME_PASSWORD = 'E_SAME_PASSWORD'
+export const E_USER_NOT_FOUND = 'E_USER_NOT_FOUND'
+export const E_INVALID_CREDENTIALS = 'E_INVALID_CREDENTIALS'
 
 export default class HttpExceptionHandler extends ExceptionHandler {
   /**
@@ -45,7 +46,13 @@ export default class HttpExceptionHandler extends ExceptionHandler {
     if (error?.code === E_INVALID_CREDENTIALS) {
       logger.error(`${artifact} - Error: ${error.message}`)
 
-      return response.status(400).json({ message: error.message })
+      return response.status(401).json({ message: error.message })
+    }
+
+    if (error?.code === E_USER_NOT_FOUND) {
+      logger.error(`${artifact} - Error: ${error.message}`)
+
+      return response.status(404).json({ message: error.message })
     }
 
     if (error?.sql && error?.code !== ER_DUP_ENTRY) {

@@ -1,13 +1,27 @@
 import { test } from '@japa/runner'
 
-import { deleteUser } from '#models/users/repository'
+import { CreateUserDTO } from '#models/users/dto'
+import UserService from '#services/users_service'
+import AuthRepository from '#models/auth/repository'
+import UserRepository from '#models/users/repository'
+import PasswordEncryption from '#services/password_encription'
 
 test.group('Users create', () => {
+  const authRepository = new AuthRepository()
+  const userRepository = new UserRepository(authRepository)
+  const passwordEncryption = new PasswordEncryption()
+  const userService = new UserService(userRepository, passwordEncryption)
+
   test('should create a new user successfully', async ({ client }) => {
+    const email = `johndoe${Math.floor(Math.random() * 1000)}@example.com`
+
+    // Delete the user if it exists
+    await userService.destroy(email)
+
     const response = await client.post('/api/users/').json({
       name: 'John',
       lastname: 'Doe',
-      email: `johndoe${Math.floor(Math.random() * 1000)}@example.com`,
+      email,
       password: 'password789',
       age: 28,
       role: 'USER',
@@ -36,23 +50,23 @@ test.group('Users create', () => {
     const EMAIL_TEST = 'duplicate@example.com'
 
     // Delete the user if it exists
-    await deleteUser(EMAIL_TEST)
+    await userService.destroy(EMAIL_TEST)
 
     // Create a user first
-    await client.post('/api/users/').json({
+    await userService.create({
       name: 'John',
       lastname: 'Doe',
-      email: 'duplicate@example.com',
+      email: EMAIL_TEST,
       password: 'password789',
       age: 28,
       role: 'USER',
-    })
+    } as CreateUserDTO)
 
     // Try creating the user again
     const response = await client.post('/api/users/').json({
       name: 'John',
       lastname: 'Doe',
-      email: 'duplicate@example.com',
+      email: EMAIL_TEST,
       password: 'Password123!',
       age: 28,
       role: 'USER',
@@ -60,7 +74,7 @@ test.group('Users create', () => {
 
     response.assertStatus(409)
     response.assertBodyContains({
-      message: "Duplicate entry 'duplicate@example.com' for key 'users.users_email_unique'",
+      message: `Duplicate entry '${EMAIL_TEST}' for key 'users.users_email_unique'`,
     })
   })
 

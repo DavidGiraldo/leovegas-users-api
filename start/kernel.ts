@@ -3,7 +3,7 @@
 | API Tooling imports
 |--------------------------------------------------------------------------
 */
-import { setMySQLConn } from '#config/database'
+import setMySQLConn from '#config/database'
 
 /*
 |--------------------------------------------------------------------------

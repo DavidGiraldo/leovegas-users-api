@@ -1,15 +1,20 @@
+import { inject } from '@adonisjs/core'
 import { HttpContext } from '@adonisjs/core/http'
 
 import { logger } from '#config/logger'
 import AuthService from '#services/auth_service'
 import HttpExceptionHandler from '#exceptions/handler'
+import { canTryLogin } from '#validators/users_data_validator'
 
+@inject()
 export default class AuthController extends HttpExceptionHandler {
-  private readonly authService = new AuthService()
+  constructor(protected authService: AuthService) {
+    super()
+  }
 
   public async login({ request, response }: HttpContext) {
     try {
-      const { email, password } = request.all()
+      const { email, password } = await canTryLogin.validate(request.all())
 
       const accessToken = await this.authService.login(email, password)
 

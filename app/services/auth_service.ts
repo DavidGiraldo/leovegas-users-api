@@ -1,23 +1,40 @@
-import bcrypt from 'bcrypt'
+import { inject } from '@adonisjs/core'
 
 import { logger } from '#config/logger'
 import { genUserAuthToken } from '#config/auth'
 import { CreateUserDTO } from '#models/users/dto'
-import { UserSession } from '#app/interfaces/user_session'
-import { getUserByEmail } from '#app/models/users/repository'
-import { upsertUserToken } from '#app/models/auth/repository'
+import AuthRepository from '#models/auth/repository'
+import UserRepository from '#models/users/repository'
+import PasswordEncryption from '#services/password_encription'
+import { E_INVALID_CREDENTIALS } from '#app/exceptions/handler'
+import { UserSessionInterface } from '#app/interfaces/user_session_interface'
+import { AuthServiceInterface } from '#app/interfaces/auth_service_interface'
 
-export default class AuthService {
-  public async login(email: string, password: string) {
+@inject()
+export default class AuthService implements AuthServiceInterface {
+  constructor(
+    protected userRepository: UserRepository,
+    protected authRepository: AuthRepository,
+    protected passwordEncryption: PasswordEncryption
+  ) {}
+
+  public async login(email: string, password: string): Promise<string> {
     try {
       // Get the user by email
-      const user = (await getUserByEmail(email)) as CreateUserDTO
+      const user = (await this.userRepository.getUserByEmail(email)) as CreateUserDTO
+
+      if (!user) {
+        const error = new Error('Invalid credentials')
+        Object.assign(error, { code: E_INVALID_CREDENTIALS })
+
+        throw error
+      }
 
       // Compare the password
-      const isPasswordMatch = await bcrypt.compare(password, user.password)
+      const isPasswordMatch = await this.passwordEncryption.compare(password, user.password)
       if (!isPasswordMatch) {
         const error = new Error('Invalid credentials')
-        Object.assign(error, { code: 'E_INVALID_CREDENTIALS' })
+        Object.assign(error, { code: E_INVALID_CREDENTIALS })
 
         throw error
       }
@@ -27,10 +44,10 @@ export default class AuthService {
         userId: user.userId,
         email: user.email,
         role: user.role,
-      } as UserSession)
+      } as UserSessionInterface)
 
       // Upsert the user access token to the database
-      await upsertUserToken(user, accessToken)
+      await this.authRepository.upsertUserToken(user, accessToken)
 
       logger.info(`${AuthService.name} - User access token generated successfully`)
 

@@ -2,7 +2,10 @@ import { test } from '@japa/runner'
 
 import { genUserAuthToken } from '#config/auth'
 import { CreateUserDTO } from '#models/users/dto'
-import { deleteUser, createUser, getUserByEmail } from '#models/users/repository'
+import UserService from '#services/users_service'
+import AuthRepository from '#models/auth/repository'
+import UserRepository from '#models/users/repository'
+import PasswordEncryption from '#services/password_encription'
 
 test.group('Users retrieve', (group) => {
   // User data
@@ -30,27 +33,32 @@ test.group('Users retrieve', (group) => {
     role: 'ADMIN',
   } as CreateUserDTO
 
+  const authRepository = new AuthRepository()
+  const userRepository = new UserRepository(authRepository)
+  const passwordEncryption = new PasswordEncryption()
+  const userService = new UserService(userRepository, passwordEncryption)
+
   group.setup(async () => {
     // First, delete the users if they exist
-    await deleteUser(user.email)
-    await deleteUser(adminUser.email)
+    await userService.destroy(user.email)
+    await userService.destroy(adminUser.email)
 
-    // Create users accounts
-    await createUser(user)
-    await createUser(adminUser)
+    // Create user accounts
+    await userService.create(user)
+    await userService.create(adminUser)
 
     // Find the users
-    const { userId } = (await getUserByEmail(user.email)) as CreateUserDTO
-    const { userId: userAdminId } = (await getUserByEmail(adminUser.email)) as CreateUserDTO
+    const userRecord = await userService.show(user.email)
+    const adminUserRecord = await userService.show(adminUser.email)
 
-    // Assing each userId to each user
-    Object.assign(user, { userId })
-    Object.assign(adminUser, { userId: userAdminId })
+    // Assign the user IDs
+    Object.assign(user, { userId: userRecord?.userId })
+    Object.assign(adminUser, { userId: adminUserRecord?.userId })
 
     // Sign the users tokens
-    userToken = genUserAuthToken({ userId, email: user.email, role: user.role })
+    userToken = genUserAuthToken({ userId: userRecord?.userId, email: user.email, role: user.role })
     adminToken = genUserAuthToken({
-      userId: userAdminId,
+      userId: adminUserRecord?.userId,
       email: adminUser.email,
       role: adminUser.role,
     })

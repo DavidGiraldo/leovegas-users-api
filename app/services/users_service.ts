@@ -1,21 +1,24 @@
-import bcrypt from 'bcrypt'
+import { inject } from '@adonisjs/core'
 
-import {
-  createUser,
-  getUserByEmail,
-  updateUser,
-  deleteUser,
-  listUsers,
-} from '#app/models/users/repository'
 import { logger } from '#config/logger'
+import UserRepository from '#models/users/repository'
+import { E_SAME_PASSWORD } from '#app/exceptions/handler'
+import PasswordEncryption from '#services/password_encription'
 import type { CreateUserDTO, UpdateUserDTO } from '#app/models/users/dto'
 
+@inject()
 export default class UserService {
+  constructor(
+    protected userRepository: UserRepository,
+    protected passwordEncryption: PasswordEncryption
+  ) {}
+
   public async create(data: CreateUserDTO) {
     try {
       // Hash the password before saving
-      data.password = await bcrypt.hash(data.password, 10)
-      await createUser(data)
+      data.password = await this.passwordEncryption.encrypt(data.password, 10)
+
+      await this.userRepository.createUser(data)
     } catch (error) {
       logger.error(`${UserService.name} - Error: ${error.message}`)
 
@@ -25,7 +28,7 @@ export default class UserService {
 
   public async show(email: string) {
     try {
-      return await getUserByEmail(email)
+      return await this.userRepository.getUserByEmail(email)
     } catch (error) {
       logger.error(`${UserService.name} - Error: ${error.message}`)
 
@@ -35,7 +38,7 @@ export default class UserService {
 
   public async index(page: number, pageSize: number) {
     try {
-      return await listUsers(page, pageSize)
+      return await this.userRepository.listUsers(page, pageSize)
     } catch (error) {
       logger.error(`${UserService.name} - Error: ${error.message}`)
 
@@ -47,23 +50,26 @@ export default class UserService {
     try {
       // Hash the password if it's being updated
       if (data.password) {
-        const existingUser = await getUserByEmail(email)
+        const existingUser = await this.userRepository.getUserByEmail(email)
         if (!existingUser) {
           throw new Error('User not found')
         }
 
         // Check if new password is the same as the existing password
-        const isSamePassword = await bcrypt.compare(data.password, existingUser.password)
+        const isSamePassword = await this.passwordEncryption.compare(
+          data.password,
+          existingUser.password
+        )
         if (isSamePassword) {
           const error = new Error('New password cannot be the same as the current password')
-          Object.assign(error, { code: 'E_SAME_PASSWORD' })
+          Object.assign(error, { code: E_SAME_PASSWORD })
 
           throw error
         }
 
-        data.password = await bcrypt.hash(data.password, 10)
+        data.password = await this.passwordEncryption.encrypt(data.password, 10)
       }
-      await updateUser(email, data)
+      await this.userRepository.updateUser(email, data)
     } catch (error) {
       logger.error(`${UserService.name} - Error: ${error.message}`)
 
@@ -73,7 +79,7 @@ export default class UserService {
 
   public async destroy(email: string) {
     try {
-      await deleteUser(email)
+      await this.userRepository.deleteUser(email)
     } catch (error) {
       logger.error(`${UserService.name} - Error: ${error.message}`)
 
